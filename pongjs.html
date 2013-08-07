@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<head>
+	<title>pong-js</title>
+	<style type="text/css">
+		body{margin:0px;}
+		#game{float:left;margin:30px;background-color:black;}
+	</style>
+	<script id="livescript" type="text/javascript"></script>
+</head>
+
+<body>
+<canvas id="game" width=640 height=480></canvas>
+<script>
+	canvas = document.getElementById("game");
+	context = canvas.getContext('2d');
+
+	input1 = 0; input2 = 0;
+	p1_inputs = {'87':-1, '83':1};
+	p2_inputs = {'38':-1, '40':1};
+
+	window.onkeydown = function(e){inputRoute(1, e.keyCode)}
+	window.onkeyup = function(e){inputRoute(0, e.keyCode)}
+	inputRoute = function(toggle, code){
+		if (p1_inputs[code]) { input1 = p1_inputs[code]*toggle; }
+		if (p2_inputs[code]) { input2 = p2_inputs[code]*toggle; }
+	}
+
+	window.requestAnimFrame = (function(){
+    return  window.requestAnimationFrame       ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame    ||
+            function( callback ){
+              window.setTimeout(callback, 1000 / 60);
+            };
+  	})();
+
+  	window.drawRect = function(r){
+  		context.beginPath();
+		context.rect(r.x, r.y, r.w, r.h);
+		context.fillStyle = 'white';
+		context.fill();
+  	}
+
+  	function intersect(r1, r2) { return !(r2.x > r1.x+r1.w || r2.x+r2.w < r1.x || r2.y > r1.y+r1.h ||r2.y+r2.h < r1.y); }
+
+  	randRange = function(lb,ub){ return Math.random()*(ub-lb); }
+  	randArray = function(a){ return a[Math.floor(Math.random()*a.length)]; }
+
+  	update = function(){
+  		context.clearRect ( 0 , 0 , 640 , 480 );
+  		pong.x += pong.vx;
+  		pong.y += pong.vy;
+  		player1.y += window.input1 * 3;
+  		player2.y += window.input2 * 3;
+
+  		if (player1.y < 0){ player1.y = 0; };
+  		if (player1.y > 400){ player1.y = 400; };
+
+  		if (player2.y < 0){ player2.y = 0; };
+  		if (player2.y > 400){ player2.y = 400; };
+
+  		if (intersect(pong, player1) || intersect(pong, player2) ){ pong.vx *= -1; pong.x += pong.vx;}
+  		if (pong.y+10 > 480 || pong.y < 0){ pong.vy *= -1;}
+  		if (pong.x+10 > 640 || pong.x < 0) { newRound(); }
+
+  		for (i=0;i<rects.length;i++){
+  			drawRect( rects[i] );
+  		}
+  		window.requestAnimFrame(update);
+  	}
+
+  	newRound = function() {
+	  	player1 = {x:15,y:200,w:15,h:80};
+	  	player2 = {x:615,y:200,w:15,h:80};
+	  	pong    = {x:315,y:235,w:10,h:10,vx:randArray([-3,3]),vy:randRange(-3,3)};
+	  	rects = [player1, player2, pong];	
+	}
+
+	newRound();
+	update();
+
+</script>
+</body>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<head>
+	<title>pong-js</title>
+	<style type="text/css">
+		body{margin:0px;}
+		#game{float:left;margin:30px;background-color:black;}
+		#pongscript{
+			position:absolute;
+			top:0px;
+			bottom:0px;
+			right:0px;
+			width:600px;
+			white-space:pre;
+			color:white;
+			font-size: 1em;
+			background-color:rgb(66, 66, 66);
+			padding:10px;
+			font-family: 'courier';
+			tab-size: 4;
+		}
+	</style>
+	<script src="./pongpeg.js" type="text/javascript" ></script>
+</head>
+
+<body>
+<canvas id="game" width=640 height=480></canvas>
+<textarea id="pongscript">
+
+
+pong: 10w10h 315x235y 
+p_one: pong * 8h1.9x.85y
+p_two: p_one * .05x
+
+
+
+</textarea>
+<script>
+	canvas = document.getElementById("game");
+	context = canvas.getContext('2d');
+
+	input1 = 0; input2 = 0;
+	p1_inputs = {'87':-1, '83':1};
+	p2_inputs = {'38':-1, '40':1};
+
+	window.onkeydown = function(e){inputRoute(1, e.keyCode)}
+	window.onkeyup = function(e){inputRoute(0, e.keyCode)}
+	inputRoute = function(toggle, code){
+		if (p1_inputs[code]) { input1 = p1_inputs[code]*toggle; }
+		if (p2_inputs[code]) { input2 = p2_inputs[code]*toggle; }
+	}
+
+	window.requestAnimFrame = (function(){
+    return  window.requestAnimationFrame       ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame    ||
+            function( callback ){
+              window.setTimeout(callback, 1000 / 60);
+            };
+  	})();
+
+  	window.drawRect = function(r){
+  		context.beginPath();
+		context.rect(r.x, r.y, r.w, r.h);
+		context.fillStyle = 'white';
+		context.fill();
+  	}
+
+  	pongscript = document.getElementById("pongscript");
+
+
+
+
+  	function intersect(r1, r2) { return !(r2.x > r1.x+r1.w || r2.x+r2.w < r1.x || r2.y > r1.y+r1.h ||r2.y+r2.h < r1.y); }
+
+  	randRange = function(lb,ub){ return Math.random()*(ub-lb); }
+  	randArray = function(a){ return a[Math.floor(Math.random()*a.length)]; }
+
+  	update = function(){
+  		context.clearRect ( 0 , 0 , 640 , 480 );
+  		for (i=0;i<rects.length;i++){
+  			drawRect( rects[i] );
+  		}
+  		rects.map( function(a){
+			drawRect( a );
+		})
+  		window.requestAnimFrame(update);
+  	}
+
+  	rects = [];
+	scope = {};
+
+  	Vector = function(obj){
+  		for (key in obj){
+  			if (typeof obj[key] != 'function') {
+  				this[key] = obj[key];
+  			}
+  		
+  		}
+  		this.clone = function(obj){ return new Vector(obj);	}
+  		this.apply = function(other, funct_str){
+  			//depending on the pattern, loop each property and apply the op to a result clone
+  			result = this.clone(this);
+  			for (key in other) {
+  				if (typeof other[key] != 'function') {
+  					if (other.hasOwnProperty(key)) {
+						if (this[key] ) {
+							result[key] = this[funct_str](this[key], other[key]);
+						} else {
+							//some operations don't need properties on both sides of the equation
+							if (funct_str == "add" || funct_str == "sub") {
+								result[key] = this[funct_str](0, other[key]);
+							}
+						}
+					} 
+	  			}	
+  			}
+  			return result;
+  		}
+  		this.mult = function(a, b) { return a * b; }
+  		this.div = function(a, b) { return a / b; }
+  		this.mod = function(a, b) { return a % b; }
+  		this.add = function(a, b) { return a + b; }
+  		this.sub = function(a, b) { return a - b; }	
+  		this.to_string = function() {
+  			s = ''
+  			for (key in this){
+  				if (typeof this[key] != 'function') {
+  					s += key+this[key]
+  				}
+  			}
+  			return s;
+  		}
+  	}
+
+  	debug_tokens = function(token, indent, escape){
+  		if(typeof(escape) =='function'){ if (escape()){return};}
+  		if (token.token == "statement") {
+  			console.log(indent+"statement:");
+  			debug_tokens(token.value, indent+"  ", escape);
+  		}
+  		if (token.token == "binding") {
+  			console.log(indent+"bind "+token.left.value+":");
+  			debug_tokens(token.right, indent+"  ", escape);
+  		}
+  		if (token.token == "symbol") {
+  			console.log(indent+"symbol: "+token.value+":");
+
+  		}
+  		if (token.token == "group") {
+  			console.log(indent+"(:" );
+  			debug_tokens(token.value, indent+"  ", escape);
+  		}
+  		if (token.token == "low" || token.token == "high") {
+  			console.log(indent+token.token+":");
+  			debug_tokens(token.first, indent+"  ", escape);
+  			for (var i=0;i<token.rest.length;i++){
+  				debug_tokens(token.rest[i], indent+"  ", escape);
+  			}
+  		}
+  		if (token.token == "vector") {
+  			console.log(indent+"vector:"+new Vector(token.value).to_string());
+  		}
+  		if (token["op"]) {
+  			console.log(indent+token.op+":");
+  			debug_tokens(token.value, indent+'  ', escape)
+  		}
+  	}
+
+  	function execPongScript(text){
+  		rects = [];
+	  	scope = {};
+
+		pegJSON = window.peg.parse(text);
+
+		calculate = function(token, escape){
+			if(typeof(escape) =='function'){ if (escape()){return};}
+			if (token.token == "vector") 
+				return new Vector( token.value );
+			if (token.token == "symbol") 
+				return new Vector( scope[token.value] );
+			if (token.token == "group") 
+				return calculate(token.value, escape);
+			if (token.token == "low" || token.token == "high" ) {
+				// chain additives from left recursion
+				var first = calculate(token.first, escape);
+				var rest = token.rest;
+				for (var i=0;i<rest.length;i++){
+					var part = rest[i];
+					var op = part.op;
+					val = calculate(part.value, escape);
+					first = first.apply(val, op );
+				}
+				return first;
+			}
+		}
+
+    
+  
+
+
+
+		pegJSON.map( function(a){
+			esc = 0;
+			escape = function(){
+				esc += 1;
+				if (esc > 300) {
+					return true;
+				}
+			}
+			debug_tokens(a, "", escape);
+			esc = 0;
+			if (a.value.token == "binding") {
+				result = calculate(a.value.right, escape);
+				scope[a.value.left.value] = result;
+			} else {
+				result = calculate(a, escape);
+			}
+			return a;
+		})
+
+		for (key in scope){
+			if (scope.hasOwnProperty(key)) {
+				rects.push(scope[key]);
+			}
+		}
+	}
+
+
+	update();
+
+	test_calculation = function() {
+		tests = [ ["3x / 1.2x + 5x - 6x * 32x / 2x + 7x", -81.5],
+				  ["1x / 2x / 3x / 4x / 5x + 7x * 2x * 2x * 2x + 100x / 10000x", 56.01833333333333],
+				  ["1x + 1x * 1x + 2x * 2x + 3x * 3x + 4x * 4x", 31],
+				  ["32x % 5x / 5x + 32x % 6x * .2x + 16x % -17x", 16.8]
+			]
+		for (var i=0;i<tests.length;i++){
+			p = window.peg.parse(tests[i][0]);
+			console.log(p[0]);
+			result = calculate(p[0].value);
+			console.log( "TEST: ", tests[i][0], "=", tests[i][1]+"x");
+			console.log("    ", result.to_string());
+		}
+	}
+
+	pongscript.onkeyup = function(){
+		console.log( this.value);
+		execPongScript(this.value);
+	}
+	execPongScript(pongscript.innerHTML);
+
+</script>
+</body>

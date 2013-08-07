@@ -1,0 +1,44 @@
+/*
+ * Classic example grammar, which recognizes simple arithmetic expressions like
+ * "2*(3+4)". The parser generated from this grammar then computes their value.
+ */
+
+start
+  = (additive / multiplicative )+
+
+
+
+
+multiplicative = first:number rest:high_duo+ {return {token: 'high', first:first, rest:rest}}
+
+high_duo = ( w op:highop w val:number ) {return {op:op, val:val}}
+
+
+additive = first:(multiplicative / number ) rest:low_duo+ {return {token: 'low', first:first, rest:rest}}
+
+low_duo = ( w op:lowop w val:(multiplicative / number ) ) {return {op:op, val:val}}
+
+operator = (highop / lowop)
+
+highop = ("*" / "/" )
+
+lowop = ("+" / "-")
+
+
+number
+  = w number:(float / integer) w
+    {return number}
+
+float
+  = w sign:"-"?
+    before:[0-9]* "." after:[0-9]+ {
+      return parseFloat(sign+before.join("") + "." + after.join(""));
+    }
+integer "integer"
+  = digits:[0-9]+ { return parseInt(digits.join(""), 10); }
+
+w
+  = string:(" " / tab )* {return string.join('')}
+
+tab =
+  [\t] {return "\t" }

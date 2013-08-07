@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<head>
+<title>pong-js</title>
+
+<style type="text/css">
+	body{margin:0px;}
+	#game{float:left;margin:30px;}
+	#script{
+		position:absolute;
+		top:0px;
+		bottom:0px;
+		right:0px;
+		width:500px;
+		white-space:pre;
+		color:white;
+		font-size: .8em;
+		background-color:rgb(66, 66, 66);
+		padding:10px;
+		font-family: 'courier';
+		tab-size: 4;
+	}
+
+	#error{
+		position:absolute;
+		top:0px;
+		bottom:0px;
+		right:0px;
+		width:500px;
+		height: .8em ;
+		margin-top:.1em;
+		margin-bottom: .1em;
+		background-color:orange;
+	}
+</style>
+<script id="livescript" type="text/javascript"></script>
+</head>
+
+<body>
+
+<canvas id="game" width=640 height=480></canvas>
+
+<div id="panel">
+	<textarea id="script">5
+	5</textarea>
+	<div id="error"></div>
+</div>
+
+<script>
+	script = document.getElementById("script");
+	livescript = document.getElementById("livescript");
+	head = document.getElementsByTagName('head')[0];
+	error = document.getElementById("error");
+	console.log( script);
+	script.onkeyup = function(){
+		r = /(\n)/gi
+		code = 'try{"'+this.value.replace(r, '\\n')+'")}  catch(e){console.log(e.stack);}';	
+
+        head.removeChild(livescript);
+        livescript = document.createElement('script');
+        livescript.setAttribute('type', 'text/javascript');
+        livescript.innerText = code;
+        head.appendChild(livescript);
+	}
+
+</script>
+
+
+
+</body>
